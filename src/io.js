@@ -59,7 +59,7 @@ export async function readArchive (file) {
   return meta
 }
 
-function slug (s) {
+export function slug (s) {
   let out = ''
   for (const ch of s.trim().toLowerCase().replace(/\s+/g, '-')) {
     if (/[a-z0-9]/.test(ch)) out += ch

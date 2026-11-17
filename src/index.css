@@ -28,6 +28,82 @@
   }
 }
 
+/* Material 3 accent roles for selectable color themes. */
+:root[data-color-theme="blue"] {
+  --surface: #f8f9ff; --surface-container: #eef1f8; --surface-container-high: #e8ebf3; --surface-container-highest: #e1e5ed;
+  --primary: #005a9c; --on-primary: #fff;
+  --primary-container: #d1e4ff; --on-primary-container: #001d36;
+  --secondary-container: #d3e4f6; --on-secondary-container: #101d2a;
+  --tertiary: #6b5778; --on-tertiary: #fff;
+  --tertiary-container: #f2daff; --on-tertiary-container: #251431;
+  --inverse-primary: #9ecaff;
+}
+:root[data-color-theme="green"] {
+  --surface: #f8faf3; --surface-container: #eff2e8; --surface-container-high: #e9eddf; --surface-container-highest: #e2e7d8;
+  --primary: #386a20; --on-primary: #fff;
+  --primary-container: #b7f397; --on-primary-container: #0c2000;
+  --secondary-container: #d9e8cc; --on-secondary-container: #171e11;
+  --tertiary: #53643d; --on-tertiary: #fff;
+  --tertiary-container: #d7e9b8; --on-tertiary-container: #111f00;
+  --inverse-primary: #9cd67d;
+}
+:root[data-color-theme="orange"] {
+  --surface: #fff8f3; --surface-container: #f7eee5; --surface-container-high: #f1e7dd; --surface-container-highest: #eadfd5;
+  --primary: #8c5000; --on-primary: #fff;
+  --primary-container: #ffdcbe; --on-primary-container: #2d1600;
+  --secondary-container: #f2dfd1; --on-secondary-container: #251a12;
+  --tertiary: #725b2e; --on-tertiary: #fff;
+  --tertiary-container: #fbe0a6; --on-tertiary-container: #241a00;
+  --inverse-primary: #ffb870;
+}
+:root[data-color-theme="rose"] {
+  --surface: #fff7f8; --surface-container: #f7edef; --surface-container-high: #f1e6e9; --surface-container-highest: #eadfe2;
+  --primary: #ba005c; --on-primary: #fff;
+  --primary-container: #ffd9e2; --on-primary-container: #3e001b;
+  --secondary-container: #f3dbe2; --on-secondary-container: #26171b;
+  --tertiary: #805343; --on-tertiary: #fff;
+  --tertiary-container: #ffdbcc; --on-tertiary-container: #321207;
+  --inverse-primary: #ffb1c6;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-color-theme="blue"] {
+    --surface: #111318; --surface-container: #1a1c22; --surface-container-high: #24262d; --surface-container-highest: #2e3038;
+    --primary: #9ecaff; --on-primary: #003258;
+    --primary-container: #00497d; --on-primary-container: #d1e4ff;
+    --secondary-container: #394858; --on-secondary-container: #d3e4f6;
+    --tertiary: #d6bee4; --on-tertiary: #3b2947;
+    --tertiary-container: #53405f; --on-tertiary-container: #f2daff;
+    --inverse-primary: #005a9c;
+  }
+  :root[data-color-theme="green"] {
+    --surface: #12140f; --surface-container: #1b1e17; --surface-container-high: #25281f; --surface-container-highest: #2f3328;
+    --primary: #9cd67d; --on-primary: #193800;
+    --primary-container: #254f0b; --on-primary-container: #b7f397;
+    --secondary-container: #414a37; --on-secondary-container: #d9e8cc;
+    --tertiary: #bbc99d; --on-tertiary: #263415;
+    --tertiary-container: #3d4b2a; --on-tertiary-container: #d7e9b8;
+    --inverse-primary: #386a20;
+  }
+  :root[data-color-theme="orange"] {
+    --surface: #17120d; --surface-container: #211b15; --surface-container-high: #2c251e; --surface-container-highest: #373027;
+    --primary: #ffb870; --on-primary: #4b2800;
+    --primary-container: #693c00; --on-primary-container: #ffdcbe;
+    --secondary-container: #554333; --on-secondary-container: #f2dfd1;
+    --tertiary: #dfc48c; --on-tertiary: #3e2e08;
+    --tertiary-container: #57451f; --on-tertiary-container: #fbe0a6;
+    --inverse-primary: #8c5000;
+  }
+  :root[data-color-theme="rose"] {
+    --surface: #191113; --surface-container: #231a1d; --surface-container-high: #2e2326; --surface-container-highest: #382c30;
+    --primary: #ffb1c6; --on-primary: #65002e;
+    --primary-container: #900046; --on-primary-container: #ffd9e2;
+    --secondary-container: #5a3f47; --on-secondary-container: #f3dbe2;
+    --tertiary: #f2b9a2; --on-tertiary: #4b2619;
+    --tertiary-container: #653d2e; --on-tertiary-container: #ffdbcc;
+    --inverse-primary: #ba005c;
+  }
+}
+
 @theme inline {
   --color-surface: var(--surface);
   --color-on-surface: var(--on-surface);

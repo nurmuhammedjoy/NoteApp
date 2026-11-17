@@ -1,0 +1,8 @@
+name = "gh-auth-forwarder"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Optional hardening — uncomment and fill in before deploying:
+# [vars]
+# ALLOWED_ORIGIN = "https://your-app.example.com"   # or http://localhost:5173 for local dev
+# CLIENT_ID = "Ov23libyW7mWGEGLDe4F"

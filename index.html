@@ -6,6 +6,13 @@
     <meta name="theme-color" content="#fef7ff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#141218" media="(prefers-color-scheme: dark)" />
     <title>Note — tiny text library</title>
+    <script>
+      // Apply the saved accent theme before first paint to avoid a flash of the default purple.
+      try {
+        var t = localStorage.getItem('note-color-theme')
+        if (t) document.documentElement.dataset.colorTheme = t
+      } catch {}
+    </script>
     <!-- Self-hosted fonts (public/fonts.+css); no network dependency at runtime -->
     <link rel="stylesheet" href="/fonts.css" />
   </head>

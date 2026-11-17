@@ -75,7 +75,10 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
   const save = () => {
     if (!text.trim()) return onClose()          // empty note = discard it (same as Google Keep)
     const auto = cutWords(text.trim().split('\n')[0], 64)
-    onSave({ title: title.trim() || auto, text, folderId })
+    const draft = { title: title.trim() || auto, text, folderId }
+    // Nothing changed → just close, without touching updatedAt or showing "Saved."
+    if (snippet && draft.title === snippet.title && draft.text === snippet.text && draft.folderId === snippet.folderId) return onClose()
+    onSave(draft)
   }
 
   const sorted = [...folders].sort((a, b) => a.order - b.order)

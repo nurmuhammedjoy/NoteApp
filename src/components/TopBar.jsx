@@ -1,19 +1,16 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { IconButton, MenuButton } from '../ui.jsx'
-import { CancelIcon, SearchIcon, FolderOpenIcon, SettingsIcon } from '../icons.jsx'
+import { IconButton } from '../ui.jsx'
+import { CancelIcon, SearchIcon, SettingsIcon } from '../icons.jsx'
 
 // Title row scrolls away; search + children (folder chips) stay pinned.
-export default function TopBar ({ searchRef, query, resultCount, onQuery, onSettings, onManage, children }) {
+export default function TopBar ({ searchRef, query, resultCount, onQuery, onSettings, children }) {
   return (
     <>
       <div className="flex h-16 items-center justify-between pr-3 pl-5">
         <h1 className="text-[22px] leading-7 font-medium">Note</h1>
-        <MenuButton
-          items={[
-            { label: 'Manage folders', icon: <FolderOpenIcon />, onSelect: onManage },
-            { label: 'Settings', icon: <SettingsIcon />, onSelect: onSettings },
-          ]}
-        />
+        <IconButton aria-label="Settings" onClick={onSettings}>
+          <SettingsIcon />
+        </IconButton>
       </div>
 
       <div className="sticky top-0 z-20 bg-surface pt-1 pb-2">

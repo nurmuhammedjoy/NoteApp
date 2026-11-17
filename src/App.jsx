@@ -9,8 +9,10 @@ import SnippetEditor from './components/SnippetEditor.jsx'
 import FolderManager, { NewFolderDialog } from './components/FolderManager.jsx'
 import ImportDialog from './components/ImportDialog.jsx'
 import Settings from './components/Settings.jsx'
+import { COLOR_THEMES } from './theme.js'
 import { copyText, deleteFolder, deleteSnippet, getFolders, getSnippets, importData, newId, putFolder, putSnippet, reassignToDefault } from './db.js'
 import { exportArchive, readArchive } from './io.js'
+import { onSyncEvent, scheduleSync, syncNow } from './github/sync.js'
 
 const mergeById = (current, incoming) => {
   const map = new Map(current.map(x => [x.id, x]))
@@ -18,23 +20,56 @@ const mergeById = (current, incoming) => {
   return [...map.values()]
 }
 
+const readColorTheme = () => {
+  try {
+    const saved = localStorage.getItem('note-color-theme')
+    return COLOR_THEMES.some(theme => theme.id === saved) ? saved : 'purple'
+  } catch {
+    return 'purple'
+  }
+}
+
 export default function App () {
   const [folders, setFolders] = useState([])
   const [snippets, setSnippets] = useState([])
+  const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [folder, setFolder] = useState('all')
   const [editing, setEditing] = useState(null) // null | 'new' | snippet
   const [editingQuery, setEditingQuery] = useState('')
   const [managerOpen, setManagerOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [colorTheme, setColorTheme] = useState(readColorTheme)
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [pendingImport, setPendingImport] = useState(null)
   const [toast, setToast] = useState(null) // { message, deletedSnippet? }
   const searchRef = useRef(null)
+  // Cards present in the first loaded batch render without the enter pop;
+  // only items appearing afterwards (create, delete/undo, filter) animate.
+  const loadedRef = useRef(false)
 
   useEffect(() => {
-    Promise.all([getFolders(), getSnippets()]).then(([f, s]) => { setFolders(f); setSnippets(s) })
+    document.documentElement.dataset.colorTheme = colorTheme
+    try { localStorage.setItem('note-color-theme', colorTheme) } catch {}
+  }, [colorTheme])
+
+  useEffect(() => {
+    Promise.all([getFolders(), getSnippets()])
+      .then(([f, s]) => { setFolders(f); setSnippets(s) })
+      .catch(() => showToast('Could not load your library.'))
+      .finally(() => setLoading(false))
+      .then(() => syncNow({ auto: true }).catch(() => {})) // pull + push once on open
   }, [])
+
+  // Re-read local data after a sync changed it; surface background sync errors.
+  useEffect(() => onSyncEvent(e => {
+    if (e.changed) Promise.all([getFolders(), getSnippets()]).then(([f, s]) => { setFolders(f); setSnippets(s) })
+    if (e.error && e.auto) showToast(e.error)
+  }), [])
+
+  useEffect(() => {
+    if (folders.length || snippets.length) loadedRef.current = true
+  }, [folders, snippets])
 
   // "/" focuses the search bar, fzf-style.
   useEffect(() => {
@@ -76,6 +111,7 @@ export default function App () {
       setSnippets(list => (list.some(s => s.id === doc.id) ? list.map(s => (s.id === doc.id ? doc : s)) : [...list, doc]))
       setEditing(null)
       showToast('Saved.')
+      scheduleSync()
     })
   }
 
@@ -83,6 +119,7 @@ export default function App () {
     deleteSnippet(snippet.id).then(() => {
       setSnippets(list => list.filter(s => s.id !== snippet.id))
       setToast({ id: Date.now(), message: 'Snippet deleted.', deletedSnippet: snippet })
+      scheduleSync()
     })
   }
 
@@ -92,18 +129,21 @@ export default function App () {
     putSnippet(s).then(() => {
       setSnippets(list => (list.some(x => x.id === s.id) ? list : [...list, s]))
       setToast({ id: Date.now(), message: 'Restored.' })
+      scheduleSync()
     })
   }
 
   /* ---- folders ---- */
 
+  const counts = useMemo(() => snippets.reduce((m, x) => ({ ...m, [x.folderId]: (m[x.folderId] || 0) + 1 }), {}), [snippets])
+
   const addFolder = name => {
     const f = { id: newId(), name, order: Math.max(0, ...folders.map(x => x.order)) + 1, createdAt: Date.now() }
-    return putFolder(f).then(() => setFolders(list => [...list, f]))
+    return putFolder(f).then(() => { setFolders(list => [...list, f]); scheduleSync() })
   }
 
   const renameFolderById = (f, name) =>
-    putFolder({ ...f, name }).then(() => setFolders(list => list.map(x => (x.id === f.id ? { ...x, name } : x))))
+    putFolder({ ...f, name }).then(() => { setFolders(list => list.map(x => (x.id === f.id ? { ...x, name } : x))); scheduleSync() })
 
   const removeFolderById = f => {
     if (f.id === 'inbox') return
@@ -114,6 +154,7 @@ export default function App () {
         setSnippets(list => list.map(s => (s.folderId === f.id ? { ...s, folderId: 'inbox' } : s)))
         if (folder === f.id) setFolder('all')
         showToast(count ? `Folder deleted. ${count} snippet(s) moved to Inbox.` : 'Folder deleted.')
+        scheduleSync()
       })
   }
 
@@ -134,13 +175,14 @@ export default function App () {
         setPendingImport(null)
         setFolder('all')
         showToast('Imported.')
+        scheduleSync()
       })
       .catch(() => showToast('Import failed.'))
   }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col">
-      <TopBar searchRef={searchRef} query={query} resultCount={visible.length} onQuery={setQuery} onSettings={() => setSettingsOpen(true)} onManage={() => setManagerOpen(true)}>
+      <TopBar searchRef={searchRef} query={query} resultCount={visible.length} onQuery={setQuery} onSettings={() => setSettingsOpen(true)}>
         <FolderChips folders={folders} active={folder} onSelect={setFolder} />
       </TopBar>
       <main className="flex flex-1 flex-col gap-0.5 px-4 pt-2 pb-28">
@@ -149,7 +191,7 @@ export default function App () {
             <motion.div
               key={s.id}
               layout="position"
-              initial={{ opacity: 0, y: 16, scale: 0.97 }}
+              initial={loadedRef.current && { opacity: 0, y: 16, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.15 } }}
               transition={{ type: 'spring', stiffness: 420, damping: 36 }}
@@ -166,7 +208,7 @@ export default function App () {
             </motion.div>
           ))}
         </AnimatePresence>
-        {visible.length === 0 && (
+        {!loading && visible.length === 0 && (
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,7 +237,9 @@ export default function App () {
       <FolderManager
         open={managerOpen}
         folders={folders}
+        counts={counts}
         onClose={() => setManagerOpen(false)}
+        onNew={() => setNewFolderOpen(true)}
         onRename={f => name => renameFolderById(f, name)}
         onDelete={removeFolderById}
       />
@@ -204,6 +248,12 @@ export default function App () {
         onClose={() => setSettingsOpen(false)}
         onExport={handleExport}
         onImport={handleImport}
+        onManageFolders={() => setManagerOpen(true)}
+        onToast={showToast}
+        folderCount={folders.length}
+        snippetCount={snippets.length}
+        colorTheme={colorTheme}
+        onColorThemeChange={setColorTheme}
       />
       <ImportDialog
         data={pendingImport}
