@@ -1,15 +1,17 @@
 // Offline shell for the installed app. Static assets are cached on first use;
 // navigations go to the network first and fall back to the cached app shell.
-const CACHE = 'note-v2'
+const CACHE = 'note-v3'
+const BASE_URL = self.registration.scope
+const asset = path => new URL(path, BASE_URL).pathname
 const CORE = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/maskable-512.png',
-  '/apple-touch-icon.png',
-  '/fonts.css',
+  asset('./'),
+  asset('index.html'),
+  asset('manifest.webmanifest'),
+  asset('icon-192.png'),
+  asset('icon-512.png'),
+  asset('maskable-512.png'),
+  asset('apple-touch-icon.png'),
+  asset('fonts.css'),
 ]
 
 self.addEventListener('install', event => {
@@ -37,11 +39,11 @@ self.addEventListener('fetch', event => {
         .then(res => {
           if (res.ok) {
             const copy = res.clone()
-            event.waitUntil(caches.open(CACHE).then(cache => cache.put('/index.html', copy)))
+            event.waitUntil(caches.open(CACHE).then(cache => cache.put(asset('index.html'), copy)))
           }
           return res
         })
-        .catch(async () => (await caches.match('/index.html')) || (await caches.match('/')) || new Response('Offline', { status: 503 })),
+        .catch(async () => (await caches.match(asset('index.html'))) || (await caches.match(asset('./'))) || new Response('Offline', { status: 503 })),
     )
     return
   }
