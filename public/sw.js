@@ -1,11 +1,10 @@
 // Offline shell for the installed app. Static assets are cached on first use;
 // navigations go to the network first and fall back to the cached app shell.
-const CACHE = 'note-v1'
+const CACHE = 'note-v2'
 const CORE = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/icon.svg',
   '/icon-192.png',
   '/icon-512.png',
   '/maskable-512.png',
