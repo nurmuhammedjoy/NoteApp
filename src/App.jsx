@@ -10,9 +10,10 @@ import FolderManager, { NewFolderDialog } from './components/FolderManager.jsx'
 import ImportDialog from './components/ImportDialog.jsx'
 import Settings from './components/Settings.jsx'
 import { COLOR_THEMES } from './theme.js'
-import { copyText, deleteFolder, deleteSnippet, getFolders, getSnippets, importData, newId, putFolder, putSnippet, reassignToDefault } from './db.js'
+import { copyText, deleteFolderAndReassign, deleteSnippet, getFolders, getSnippets, importData, newId, putFolder, putSnippet } from './db.js'
 import { exportArchive, readArchive } from './io.js'
 import { onSyncEvent, scheduleSync, syncNow } from './github/sync.js'
+import useInstall from './install.js'
 
 const mergeById = (current, incoming) => {
   const map = new Map(current.map(x => [x.id, x]))
@@ -44,6 +45,7 @@ export default function App () {
   const [pendingImport, setPendingImport] = useState(null)
   const [toast, setToast] = useState(null) // { message, deletedSnippet? }
   const searchRef = useRef(null)
+  const { canInstall, install } = useInstall()
   // Cards present in the first loaded batch render without the enter pop;
   // only items appearing afterwards (create, delete/undo, filter) animate.
   const loadedRef = useRef(false)
@@ -147,15 +149,15 @@ export default function App () {
 
   const removeFolderById = f => {
     if (f.id === 'inbox') return
-    deleteFolder(f.id)
-      .then(() => reassignToDefault(f.id))
-      .then(count => {
+    deleteFolderAndReassign(f.id)
+      .then(({ moved, at }) => {
         setFolders(list => list.filter(x => x.id !== f.id))
-        setSnippets(list => list.map(s => (s.folderId === f.id ? { ...s, folderId: 'inbox' } : s)))
+        setSnippets(list => list.map(s => (s.folderId === f.id ? { ...s, folderId: 'inbox', updatedAt: at } : s)))
         if (folder === f.id) setFolder('all')
-        showToast(count ? `Folder deleted. ${count} snippet(s) moved to Inbox.` : 'Folder deleted.')
+        showToast(moved ? `Folder deleted. ${moved} snippet(s) moved to Inbox.` : 'Folder deleted.')
         scheduleSync()
       })
+      .catch(() => showToast('Could not delete the folder.'))
   }
 
   /* ---- import / export ---- */
@@ -164,7 +166,7 @@ export default function App () {
   const handleImport = file =>
     readArchive(file)
       .then(setPendingImport)
-      .catch(() => showToast('Import failed: unrecognized file.'))
+      .catch(e => showToast(`Import failed: ${e.message || 'unrecognized file.'}`))
   const applyImport = replace => {
     const meta = pendingImport
     if (!meta) return
@@ -254,6 +256,8 @@ export default function App () {
         snippetCount={snippets.length}
         colorTheme={colorTheme}
         onColorThemeChange={setColorTheme}
+        canInstall={canInstall}
+        onInstall={install}
       />
       <ImportDialog
         data={pendingImport}

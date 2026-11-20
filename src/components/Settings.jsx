@@ -15,19 +15,20 @@ export const Group = ({ label, children }) => (
   </section>
 )
 
-export const Row = ({ icon, tone = 'bg-primary-container text-on-primary-container', title, text, onClick }) => (
+export const Row = ({ icon, tone = 'bg-primary-container text-on-primary-container', title, text, onClick, disabled, trailing }) => (
   <motion.button
     type="button"
     whileTap={{ scale: 0.985 }}
     onClick={onClick}
-    className="flex min-h-[76px] w-full cursor-pointer items-center gap-4 bg-surface-container py-3 pr-4 pl-4 text-left outline-none transition-colors hover:bg-surface-container-high active:bg-surface-container-highest focus-visible:ring-2 focus-visible:ring-primary"
+    disabled={disabled}
+    className="flex min-h-[76px] w-full cursor-pointer disabled:cursor-default disabled:opacity-70 items-center gap-4 bg-surface-container py-3 pr-4 pl-4 text-left outline-none transition-colors hover:bg-surface-container-high active:bg-surface-container-highest focus-visible:ring-2 focus-visible:ring-primary"
   >
     <span className={`grid size-12 shrink-0 place-items-center rounded-2xl [&>svg]:size-6 ${tone}`}>{icon}</span>
     <span className="min-w-0 flex-1">
       <span className="block text-base font-medium text-on-surface">{title}</span>
       <span className="block truncate text-sm text-on-surface-variant">{text}</span>
     </span>
-    <ChevronRightIcon className="size-6 shrink-0 text-on-surface-variant" />
+    {trailing === undefined ? <ChevronRightIcon className="size-6 shrink-0 text-on-surface-variant" /> : trailing}
   </motion.button>
 )
 
@@ -47,7 +48,7 @@ const Tile = ({ icon, tone, title, text, onClick, className }) => (
 )
 
 // Full-screen tab opened from the Settings button: appearance and library tools.
-export default function Settings ({ open, onClose, onExport, onImport, onManageFolders, onToast, folderCount, snippetCount, colorTheme, onColorThemeChange }) {
+export default function Settings ({ open, onClose, onExport, onImport, onManageFolders, onToast, folderCount, snippetCount, colorTheme, onColorThemeChange, canInstall, onInstall }) {
   const fileRef = useRef(null)
   if (!open) return null
 
@@ -71,7 +72,7 @@ export default function Settings ({ open, onClose, onExport, onImport, onManageF
         <Group label="Appearance">
           <fieldset className="bg-surface-container p-4">
             <legend className="sr-only">Color theme</legend>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-6 gap-2">
               {COLOR_THEMES.map(theme => {
                 const on = colorTheme === theme.id
                 return (
@@ -111,6 +112,12 @@ export default function Settings ({ open, onClose, onExport, onImport, onManageF
         </Group>
 
         <SyncSection onToast={onToast} />
+
+        {canInstall && (
+          <Group label="App">
+            <Row icon={<DownloadIcon />} title="Install app" text="Add Note to your home screen" onClick={onInstall} />
+          </Group>
+        )}
 
         <section>
           <h3 className="px-4 pb-2 text-sm font-medium text-primary">Backup</h3>

@@ -1,7 +1,7 @@
 // Tiny Material 3 component kit, plain Tailwind. Colors come from the role
 // tokens in index.css, so everything follows light/dark automatically.
-import { forwardRef, useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from 'motion/react'
 import { AddIcon, CheckIcon, CloseIcon, ExpandMoreIcon, MoreVertIcon } from './icons.jsx'
 
 const cx = (...a) => a.filter(Boolean).join(' ')
@@ -104,30 +104,75 @@ export function MenuButton ({ label = 'More options', items }) {
   )
 }
 
-// Native <dialog>: focus trap, Esc and backdrop come for free. `sheet` = bottom sheet.
-export function Dialog ({ open, onClose, title, actions, sheet, children }) {
+// Native <dialog>: focus trap, Esc and backdrop come for free.
+// `sheet` = bottom sheet: slides in, and the handle + title strip can be dragged down
+// (or the handle tapped) to dismiss. The list inside keeps scrolling normally.
+// `footer` = content pinned under the scrolling body, above the actions.
+export function Dialog ({ open, onClose, title, actions, footer, sheet, children }) {
   const ref = useRef(null)
-  useEffect(() => {
+  const y = useMotionValue(0)
+  const controls = useDragControls()
+  const dragged = useRef(false)
+
+  useLayoutEffect(() => {
     const d = ref.current
-    if (open && !d.open) d.showModal()
+    if (open && !d.open) {
+      d.showModal()
+      if (sheet && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        y.set(d.offsetHeight)
+        animate(y, 0, { type: 'spring', stiffness: 420, damping: 38 })
+      } else y.set(0)
+    }
     if (!open && d.open) d.close()
   }, [open])
 
+  const settle = (_, info) => {
+    if (info.offset.y > 110 || info.velocity.y > 600) {
+      animate(y, ref.current.offsetHeight, { duration: 0.18, ease: 'easeIn' }).then(onClose)
+    } else {
+      animate(y, 0, { type: 'spring', stiffness: 500, damping: 40 })
+    }
+  }
+
   return (
-    <dialog
+    <motion.dialog
       ref={ref}
       aria-label={title}
       onClose={onClose}
       onClick={e => e.target === e.currentTarget && onClose()}
+      style={sheet ? { y } : undefined}
+      drag={sheet ? 'y' : false}
+      dragControls={controls}
+      dragListener={false}
+      dragConstraints={{ top: 0 }}
+      dragElastic={0}
+      dragMomentum={false}
+      onDragStart={() => { dragged.current = true }}
+      onDragEnd={settle}
       className={cx('m-auto max-h-[90dvh] overflow-hidden bg-surface-container-high p-0 text-on-surface backdrop:bg-scrim/40', sheet ? 'mt-auto mb-0 w-full max-w-xl rounded-t-[28px]' : 'w-[min(26rem,calc(100vw-2rem))] rounded-[28px]')}
     >
-      <div className={cx('flex max-h-[90dvh] flex-col gap-4', sheet ? 'px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]' : 'p-6')}>
-        {sheet && <div className="mx-auto h-1 w-8 shrink-0 rounded-full bg-on-surface-variant/40" />}
-        <h2 className={cx('shrink-0', sheet ? 'text-[22px] leading-7' : 'text-2xl leading-8')}>{title}</h2>
+      <div className={cx('flex max-h-[90dvh] flex-col gap-4', sheet ? 'px-5 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))]' : 'p-6')}>
+        <div
+          className={cx('shrink-0', sheet && 'touch-none select-none')}
+          onPointerDown={sheet ? e => { dragged.current = false; controls.start(e) } : undefined}
+        >
+          {sheet && (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => { if (!dragged.current) onClose() }}
+              className="group mx-auto -mb-1 flex h-8 w-full cursor-grab items-center justify-center rounded-full outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <span className="h-1 w-8 rounded-full bg-on-surface-variant/40 transition-all group-hover:w-10 group-active:w-12 group-active:bg-on-surface-variant/70" />
+            </button>
+          )}
+          <h2 className={sheet ? 'text-[22px] leading-7' : 'text-2xl leading-8'}>{title}</h2>
+        </div>
         <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain">{children}</div>
+        {footer && <div className="shrink-0">{footer}</div>}
         {actions && <div className="flex shrink-0 flex-wrap justify-end gap-2">{actions}</div>}
       </div>
-    </dialog>
+    </motion.dialog>
   )
 }
 

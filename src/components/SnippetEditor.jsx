@@ -20,6 +20,80 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
   const [searchView, setSearchView] = useState(false)
   const [activeMatch, setActiveMatch] = useState(0)
   const scrollRef = useRef(null)
+  const titleRef = useRef(null)
+  const bottomBarRef = useRef(null)
+  const mirrorRef = useRef(null)
+  const activeFieldRef = useRef(null)
+  const revealFrameRef = useRef(0)
+
+  const scheduleReveal = el => {
+    if (!el) return
+    activeFieldRef.current = el
+    cancelAnimationFrame(revealFrameRef.current)
+    // Let Chrome finish applying the visual viewport resize before measuring.
+    revealFrameRef.current = requestAnimationFrame(() => requestAnimationFrame(() => revealCaret(el)))
+  }
+
+  // Measure the caret's vertical offset inside a textarea using a hidden mirror.
+  const caretOffset = el => {
+    const mirror = mirrorRef.current
+    if (!mirror || !el.clientWidth) return 0
+    const cs = getComputedStyle(el)
+    const props = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant', 'lineHeight', 'letterSpacing', 'textTransform', 'textIndent', 'wordSpacing', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth']
+    for (const prop of props) mirror.style[prop] = cs[prop]
+    mirror.style.boxSizing = 'border-box'
+    mirror.style.width = `${el.getBoundingClientRect().width}px`
+    mirror.style.whiteSpace = 'pre-wrap'
+    mirror.style.overflowWrap = 'break-word'
+    mirror.style.wordBreak = 'normal'
+    mirror.textContent = el.value.slice(0, el.selectionStart)
+    const marker = document.createElement('span')
+    marker.textContent = '\u200b'
+    mirror.appendChild(marker)
+    return marker.getBoundingClientRect().top - mirror.getBoundingClientRect().top
+  }
+
+  // Scroll only when the active field or caret sits outside the visible area above the bottom bar.
+  const revealCaret = el => {
+    const box = scrollRef.current
+    if (!box || !el) return
+    const boxRect = box.getBoundingClientRect()
+    const barTop = bottomBarRef.current?.getBoundingClientRect().top ?? boxRect.bottom
+    const visibleTop = boxRect.top + box.clientTop
+    const visibleBottom = Math.min(boxRect.bottom, barTop)
+    let caretTop, caretBottom
+    if (el.tagName === 'TEXTAREA') {
+      const rect = el.getBoundingClientRect()
+      const borderTop = parseFloat(getComputedStyle(el).borderTopWidth) || 0
+      const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 24
+      caretTop = rect.top + borderTop + caretOffset(el) - el.scrollTop
+      caretBottom = caretTop + lineHeight
+    } else {
+      const rect = el.getBoundingClientRect()
+      caretTop = rect.top
+      caretBottom = rect.bottom
+    }
+    const margin = 8
+    let delta = 0
+    if (caretTop < visibleTop + margin) delta = caretTop - (visibleTop + margin)
+    else if (caretBottom > visibleBottom - margin) delta = caretBottom - (visibleBottom - margin)
+    if (delta) box.scrollTop = Math.max(0, box.scrollTop + delta)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const update = () => scheduleReveal(activeFieldRef.current)
+    const viewport = window.visualViewport
+    viewport?.addEventListener('resize', update)
+    viewport?.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
+    return () => {
+      viewport?.removeEventListener('resize', update)
+      viewport?.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+      cancelAnimationFrame(revealFrameRef.current)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -29,7 +103,10 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
     setFolderMenuOpen(false)
     setSearchView(Boolean(searchQuery && snippet))
     setActiveMatch(0)
-    if (!snippet) requestAnimationFrame(() => textRef.current?.focus())
+    if (!snippet) requestAnimationFrame(() => {
+      textRef.current?.focus({ preventScroll: true })
+      scheduleReveal(textRef.current)
+    })
   }, [open, snippet])
 
   // Grow the textarea with its content: reset to auto height, then measure.
@@ -105,15 +182,30 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
       {/* content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pb-24">
         {searchView ? <div className="w-full py-3 text-[28px] leading-tight break-words">{highlight(title, 'title')}</div> : <input
+          ref={titleRef}
           value={title}
-          onChange={e => setTitle(e.target.value)}
+          onChange={e => {
+            setTitle(e.target.value)
+            scheduleReveal(e.currentTarget)
+          }}
+          onFocus={e => scheduleReveal(e.currentTarget)}
+          onClick={e => scheduleReveal(e.currentTarget)}
+          onSelect={e => scheduleReveal(e.currentTarget)}
+          onKeyUp={e => scheduleReveal(e.currentTarget)}
           placeholder="Title"
           className="w-full bg-transparent py-3 text-[28px] leading-tight outline-none placeholder:text-on-surface-variant"
         />}
         {searchView ? <div className="mt-2 min-h-[50vh] w-full whitespace-pre-wrap break-words text-[17px] leading-relaxed">{highlight(text, 'text')}</div> : <textarea
           ref={textRef}
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => {
+            setText(e.target.value)
+            scheduleReveal(e.currentTarget)
+          }}
+          onFocus={e => scheduleReveal(e.currentTarget)}
+          onClick={e => scheduleReveal(e.currentTarget)}
+          onSelect={e => scheduleReveal(e.currentTarget)}
+          onKeyUp={e => scheduleReveal(e.currentTarget)}
           placeholder="Note"
           rows={1}
           className="mt-2 block min-h-[50vh] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-on-surface-variant"
@@ -126,8 +218,15 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
         />}
       </div>
 
+      {/* Offscreen mirror used only to locate the textarea caret across wrapped lines. */}
+      <div
+        ref={mirrorRef}
+        aria-hidden="true"
+        style={{ position: 'fixed', left: '-10000px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}
+      />
+
       {/* bottom bar */}
-      {searchView ? <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1rem)]">
+      {searchView ? <div ref={bottomBarRef} className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1rem)]">
         <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-surface-container-high p-1.5 shadow-lg">
           <IconButton variant="tonal" className="size-12" disabled={!matches.length} onClick={() => goToMatch(activeMatch - 1)} aria-label="Previous match"><ExpandMoreIcon className="rotate-180" /></IconButton>
           <span className="min-w-20 text-center text-sm font-medium tabular-nums text-on-surface">{matches.length ? `${activeMatch + 1} / ${matches.length}` : 'No matches'}</span>
@@ -135,7 +234,7 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
           <span aria-hidden="true" className="mx-1 h-6 w-px bg-outline-variant" />
           <IconButton className="size-12" onClick={() => onCopy?.(text)} aria-label="Copy note"><CopyIcon /></IconButton>
         </div>
-      </div> : <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-surface px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+      </div> : <div ref={bottomBarRef} className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-surface px-4 pt-2 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         <div className="relative" ref={folderMenuRef}>
           {folderMenuOpen && (
             <>

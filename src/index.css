@@ -48,13 +48,13 @@
   --inverse-primary: #9cd67d;
 }
 :root[data-color-theme="orange"] {
-  --surface: #fff8f3; --surface-container: #f7eee5; --surface-container-high: #f1e7dd; --surface-container-highest: #eadfd5;
-  --primary: #8c5000; --on-primary: #fff;
-  --primary-container: #ffdcbe; --on-primary-container: #2d1600;
-  --secondary-container: #f2dfd1; --on-secondary-container: #251a12;
-  --tertiary: #725b2e; --on-tertiary: #fff;
-  --tertiary-container: #fbe0a6; --on-tertiary-container: #241a00;
-  --inverse-primary: #ffb870;
+  --surface: #d8c8a3; --surface-container: #d0bd94; --surface-container-high: #c8b387; --surface-container-highest: #bfa97b;
+  --primary: #af3a03; --on-primary: #fff;
+  --primary-container: #fbe0c2; --on-primary-container: #3e1800;
+  --secondary-container: #ebdbb2; --on-secondary-container: #282828;
+  --tertiary: #8f3f71; --on-tertiary: #fff;
+  --tertiary-container: #f3d3e6; --on-tertiary-container: #321126;
+  --inverse-primary: #fe8019;
 }
 :root[data-color-theme="rose"] {
   --surface: #fff7f8; --surface-container: #f7edef; --surface-container-high: #f1e6e9; --surface-container-highest: #eadfe2;
@@ -64,6 +64,15 @@
   --tertiary: #805343; --on-tertiary: #fff;
   --tertiary-container: #ffdbcc; --on-tertiary-container: #321207;
   --inverse-primary: #ffb1c6;
+}
+:root[data-color-theme="teal"] {
+  --surface: #f4fbf8; --surface-container: #e8f3ef; --surface-container-high: #e2ede9; --surface-container-highest: #dce7e3;
+  --primary: #006a60; --on-primary: #fff;
+  --primary-container: #9cf1e4; --on-primary-container: #00201c;
+  --secondary-container: #cce8e1; --on-secondary-container: #10201c;
+  --tertiary: #46645c; --on-tertiary: #fff;
+  --tertiary-container: #c9eadf; --on-tertiary-container: #06201a;
+  --inverse-primary: #80d5c9;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-color-theme="blue"] {
@@ -85,13 +94,13 @@
     --inverse-primary: #386a20;
   }
   :root[data-color-theme="orange"] {
-    --surface: #17120d; --surface-container: #211b15; --surface-container-high: #2c251e; --surface-container-highest: #373027;
-    --primary: #ffb870; --on-primary: #4b2800;
-    --primary-container: #693c00; --on-primary-container: #ffdcbe;
-    --secondary-container: #554333; --on-secondary-container: #f2dfd1;
-    --tertiary: #dfc48c; --on-tertiary: #3e2e08;
-    --tertiary-container: #57451f; --on-tertiary-container: #fbe0a6;
-    --inverse-primary: #8c5000;
+    --surface: #121110; --surface-container: #1b1916; --surface-container-high: #24211d; --surface-container-highest: #2e2923;
+    --primary: #fe8019; --on-primary: #282828;
+    --primary-container: #5b321c; --on-primary-container: #fbf1c7;
+    --secondary-container: #45403a; --on-secondary-container: #ebdbb2;
+    --tertiary: #d3869b; --on-tertiary: #282828;
+    --tertiary-container: #543b45; --on-tertiary-container: #f2d2dd;
+    --inverse-primary: #af3a03;
   }
   :root[data-color-theme="rose"] {
     --surface: #191113; --surface-container: #231a1d; --surface-container-high: #2e2326; --surface-container-highest: #382c30;
@@ -101,6 +110,15 @@
     --tertiary: #f2b9a2; --on-tertiary: #4b2619;
     --tertiary-container: #653d2e; --on-tertiary-container: #ffdbcc;
     --inverse-primary: #ba005c;
+  }
+  :root[data-color-theme="teal"] {
+    --surface: #0f1513; --surface-container: #171e1b; --surface-container-high: #222a27; --surface-container-highest: #2d3532;
+    --primary: #80d5c9; --on-primary: #003731;
+    --primary-container: #005048; --on-primary-container: #9cf1e4;
+    --secondary-container: #314a44; --on-secondary-container: #cce8e1;
+    --tertiary: #adcec3; --on-tertiary: #18352e;
+    --tertiary-container: #304c43; --on-tertiary-container: #c9eadf;
+    --inverse-primary: #006a60;
   }
 }
 
@@ -148,6 +166,8 @@ svg { fill: currentColor; }
 
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+dialog[aria-label="Sync repository"] > div > div.overflow-y-auto { scrollbar-width: none; }
+dialog[aria-label="Sync repository"] > div > div.overflow-y-auto::-webkit-scrollbar { display: none; }
 
 dialog[open] { animation: pop .18s ease-out; }
 dialog[open]::backdrop { animation: fade .18s ease-out; }

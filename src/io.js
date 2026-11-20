@@ -37,10 +37,15 @@ export async function readArchive (file) {
     meta.snippets = meta.snippets.map(s => ({ ...s, text: s.text || '' }))
   } else {
     const zip = await JSZip.loadAsync(file)
-    meta = JSON.parse(await zip.file(META).async('string'))
+    const metaFile = zip.file(META)
+    if (!metaFile) throw new Error('not a Note backup (metadata.json is missing).')
+    meta = JSON.parse(await metaFile.async('string'))
+    if (!Array.isArray(meta.snippets)) throw new Error('unrecognized file.')
+    // A missing .txt means a damaged archive: refuse, rather than import an empty snippet.
+    const missing = meta.snippets.filter(s => typeof s?.file !== 'string' || !zip.file(s.file))
+    if (missing.length) throw new Error(`backup is incomplete (${missing.length} snippet file${missing.length === 1 ? '' : 's'} missing).`)
     for (const s of meta.snippets) {
-      const f = zip.file(s.file)
-      s.text = f ? await f.async('string') : ''
+      s.text = await zip.file(s.file).async('string')
       delete s.file
     }
   }

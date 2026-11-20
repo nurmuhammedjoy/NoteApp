@@ -71,7 +71,6 @@ export const putSnippet = s => tx(['snippets', 'meta'], 'readwrite', t => {
   t.objectStore('snippets').put(s)
   tombs(t, items => items.filter(x => x.id !== s.id))
 })
-export const deleteFolder = id => tx('folders', 'readwrite', t => t.objectStore('folders').delete(id))
 export const deleteSnippet = id => tx(['snippets', 'meta'], 'readwrite', t => {
   t.objectStore('snippets').delete(id)
   tombs(t, items => [...items.filter(x => x.id !== id), { id, deletedAt: Date.now() }])
@@ -128,12 +127,19 @@ export const applySync = ({ putFolders, deleteFolders, putSnippets, deleteSnippe
 
 export const newId = () => crypto.randomUUID()
 
-// Re-assign every snippet of a deleted folder to the default folder.
-export async function reassignToDefault (folderId) {
-  const snippets = await getSnippets()
-  const moved = snippets.filter(s => s.folderId === folderId)
-  for (const s of moved) await putSnippet({ ...s, folderId: DEFAULT_FOLDER })
-  return moved.length
+// Delete a folder and move its snippets to the default folder in ONE transaction, so a sync
+// cycle can never run between the two steps. Moved snippets get a fresh `updatedAt`: that is
+// what makes the move win the merge and trip the sync write-back guard.
+export function deleteFolderAndReassign (id) {
+  const out = { moved: 0, at: Date.now() }
+  return tx(['folders', 'snippets'], 'readwrite', t => {
+    t.objectStore('folders').delete(id)
+    const store = t.objectStore('snippets')
+    store.index('folderId').getAll(id).onsuccess = e => {
+      for (const s of e.target.result) store.put({ ...s, folderId: DEFAULT_FOLDER, updatedAt: out.at })
+      out.moved = e.target.result.length
+    }
+  }).then(() => out)
 }
 
 export async function copyText (text) {
