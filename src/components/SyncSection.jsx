@@ -21,9 +21,9 @@ const ago = ts => {
 
 const Spinner = ({ className = 'size-6' }) => <SyncIcon className={`${className} animate-spin`} />
 
-// "GitHub sync" group of the Settings tab. Owns its own small state; results go out as toasts.
+// github sync settings with local state and toast results
 export default function SyncSection ({ onToast }) {
-  const [session, setSession] = useState(undefined) // undefined = loading, null = signed out
+  const [session, setSession] = useState(undefined) // undefined means loading and null means signed out
   const [busy, setBusy] = useState(false)
   const [, tick] = useState(0)
   const [tokenOpen, setTokenOpen] = useState(false)
@@ -33,11 +33,11 @@ export default function SyncSection ({ onToast }) {
   const [repos, setRepos] = useState(null)
   const [query, setQuery] = useState('')
   const [newName, setNewName] = useState('note-sync')
-  const [pending, setPending] = useState(null) // repo key being selected / created
+  const [pending, setPending] = useState(null) // repo key being selected or created
 
   const refresh = () => getSession().then(setSession)
   useEffect(() => { refresh() }, [])
-  // Auto-sync finishes in the background: keep "Synced …" honest. Also re-render the relative time.
+  // update the sync status and relative time after background sync
   useEffect(() => onSyncEvent(() => refresh()), [])
   useEffect(() => {
     const id = setInterval(() => tick(n => n + 1), 30000)
@@ -175,7 +175,7 @@ export default function SyncSection ({ onToast }) {
           Use a fine-grained token with <b className="font-medium text-on-surface">Contents: read and write</b> on your sync repo, or a classic token with the <b className="font-medium text-on-surface">repo</b> scope. It stays in this browser only.
         </p>
         <a href={TOKEN_URL} target="_blank" rel="noreferrer noopener" className="w-fit text-sm font-medium text-primary underline-offset-2 hover:underline">Create a token on GitHub</a>
-        <Field label="Token" type="password" autoComplete="off" spellCheck={false} value={token} onChange={e => setToken(e.target.value)} onKeyDown={e => e.key === 'Enter' && useToken()} />
+        <Field label="Token" type="text" name="github-access-token" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} data-lpignore="true" data-form-type="other" style={{ WebkitTextSecurity: 'disc' }} value={token} onChange={e => setToken(e.target.value)} onKeyDown={e => e.key === 'Enter' && useToken()} />
       </Dialog>
 
       <Dialog

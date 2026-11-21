@@ -1,5 +1,5 @@
-// Import/export. Portable format: one .zip with `metadata.json` (metadata only)
-// and one plain .txt file per snippet. A bare .json backup is also accepted.
+// portable import and export uses a zip with metadata and one text file per snippet
+// plain json backups are also accepted
 import JSZip from 'jszip'
 import { DEFAULT_FOLDER } from './db.js'
 
@@ -17,7 +17,7 @@ export async function exportArchive (folders, snippets) {
   snippets.forEach((s, i) => {
     const file = `snippets/${String(i + 1).padStart(3, '0')}-${slug(s.title || s.text || 'snippet')}.txt`
     zip.file(file, s.text)
-    // Metadata keeps only pointers; snippet content lives in the .txt file.
+    // metadata stores pointers while snippet text lives in its file
     const { text, ...rest } = s
     meta.snippets.push({ ...rest, file })
   })
@@ -41,7 +41,7 @@ export async function readArchive (file) {
     if (!metaFile) throw new Error('not a Note backup (metadata.json is missing).')
     meta = JSON.parse(await metaFile.async('string'))
     if (!Array.isArray(meta.snippets)) throw new Error('unrecognized file.')
-    // A missing .txt means a damaged archive: refuse, rather than import an empty snippet.
+    // refuse damaged archives with a missing text file
     const missing = meta.snippets.filter(s => typeof s?.file !== 'string' || !zip.file(s.file))
     if (missing.length) throw new Error(`backup is incomplete (${missing.length} snippet file${missing.length === 1 ? '' : 's'} missing).`)
     for (const s of meta.snippets) {
@@ -56,9 +56,7 @@ export async function readArchive (file) {
   for (const s of meta.snippets) {
     if (!s || typeof s.id !== 'string' || !s.id) throw new Error('Invalid snippet metadata')
     s.text = typeof s.text === 'string' ? s.text : ''
-    s.title = typeof s.title === 'string' && s.title.trim()
-      ? s.title
-      : s.text.trim().split('\n')[0].slice(0, 64)
+    s.title = typeof s.title === 'string' ? s.title : ''
     if (!meta.folders.some(f => f.id === s.folderId)) s.folderId = DEFAULT_FOLDER
   }
   return meta

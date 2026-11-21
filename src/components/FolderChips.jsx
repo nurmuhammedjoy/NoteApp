@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { motion } from 'motion/react'
 
-// One row, one chip style. The active pill slides between chips (shared layoutId).
+// one row of chips with a sliding active pill
 const spring = { type: 'spring', stiffness: 500, damping: 38 }
 
 export default function FolderChips ({ folders, active, onSelect }) {
   const rowRef = useRef(null)
 
-  // Keep the active chip in view when it changes.
+  // keep the active chip in view
   useEffect(() => {
     rowRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
   }, [active])

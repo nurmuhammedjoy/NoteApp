@@ -36,18 +36,18 @@ export default function App () {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [folder, setFolder] = useState('all')
-  const [editing, setEditing] = useState(null) // null | 'new' | snippet
+  const [editing, setEditing] = useState(null) // empty or new or a snippet
   const [editingQuery, setEditingQuery] = useState('')
   const [managerOpen, setManagerOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [colorTheme, setColorTheme] = useState(readColorTheme)
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [pendingImport, setPendingImport] = useState(null)
-  const [toast, setToast] = useState(null) // { message, deletedSnippet? }
+  const [toast, setToast] = useState(null) // message and optional deleted snippet
   const searchRef = useRef(null)
   const { canInstall, install } = useInstall()
-  // Cards present in the first loaded batch render without the enter pop;
-  // only items appearing afterwards (create, delete/undo, filter) animate.
+  // cards in the first batch skip the enter animation
+  // later cards animate after create delete undo or filter
   const loadedRef = useRef(false)
 
   useEffect(() => {
@@ -60,10 +60,10 @@ export default function App () {
       .then(([f, s]) => { setFolders(f); setSnippets(s) })
       .catch(() => showToast('Could not load your library.'))
       .finally(() => setLoading(false))
-      .then(() => syncNow({ auto: true }).catch(() => {})) // pull + push once on open
+      .then(() => syncNow({ auto: true }).catch(() => {})) // pull and push once on open
   }, [])
 
-  // Re-read local data after a sync changed it; surface background sync errors.
+  // reload local data after sync and show background errors
   useEffect(() => onSyncEvent(e => {
     if (e.changed) Promise.all([getFolders(), getSnippets()]).then(([f, s]) => { setFolders(f); setSnippets(s) })
     if (e.error && e.auto) showToast(e.error)
@@ -73,7 +73,7 @@ export default function App () {
     if (folders.length || snippets.length) loadedRef.current = true
   }, [folders, snippets])
 
-  // "/" focuses the search bar, fzf-style.
+  // slash focuses the search bar
   useEffect(() => {
     const onKey = e => {
       const tag = document.activeElement?.tagName
@@ -102,7 +102,6 @@ export default function App () {
 
   const showToast = message => setToast({ id: Date.now(), message })
 
-  /* ---- snippets ---- */
 
   const saveSnippet = draft => {
     const now = Date.now()
@@ -135,7 +134,6 @@ export default function App () {
     })
   }
 
-  /* ---- folders ---- */
 
   const counts = useMemo(() => snippets.reduce((m, x) => ({ ...m, [x.folderId]: (m[x.folderId] || 0) + 1 }), {}), [snippets])
 
@@ -160,7 +158,6 @@ export default function App () {
       .catch(() => showToast('Could not delete the folder.'))
   }
 
-  /* ---- import / export ---- */
 
   const handleExport = () => exportArchive(folders, snippets).then(() => showToast('Exported.')).catch(() => showToast('Export failed.'))
   const handleImport = file =>

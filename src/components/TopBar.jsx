@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { IconButton } from '../ui.jsx'
 import { CancelIcon, SearchIcon, SettingsIcon } from '../icons.jsx'
 
-// Title row scrolls away; search + children (folder chips) stay pinned.
+// title row scrolls away while search and folder chips stay pinned
 export default function TopBar ({ searchRef, query, resultCount, onQuery, onSettings, children }) {
   return (
     <>

@@ -1,5 +1,5 @@
-// Tiny Material 3 component kit, plain Tailwind. Colors come from the role
-// tokens in index.css, so everything follows light/dark automatically.
+// small material 3 component kit using tailwind
+// colors use the role tokens in index css for light and dark themes
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, animate, motion, useDragControls, useMotionValue } from 'motion/react'
 import { AddIcon, CheckIcon, CloseIcon, ExpandMoreIcon, MoreVertIcon } from './icons.jsx'
@@ -43,7 +43,7 @@ export const Fab = ({ className, ...p }) => (
   />
 )
 
-// ⋮ button + popup menu. items: [{ label, icon, onSelect }]
+// menu button and popup with label icon and select action items
 export function MenuButton ({ label = 'More options', items }) {
   const [open, setOpen] = useState(false)
   const [up, setUp] = useState(false)
@@ -104,10 +104,10 @@ export function MenuButton ({ label = 'More options', items }) {
   )
 }
 
-// Native <dialog>: focus trap, Esc and backdrop come for free.
-// `sheet` = bottom sheet: slides in, and the handle + title strip can be dragged down
-// (or the handle tapped) to dismiss. The list inside keeps scrolling normally.
-// `footer` = content pinned under the scrolling body, above the actions.
+// native dialog provides focus trap escape key and backdrop behavior
+// sheet mode slides from the bottom and can close by dragging or tapping the handle
+// the list inside keeps scrolling
+// footer content stays below the body and above the actions
 export function Dialog ({ open, onClose, title, actions, footer, sheet, children }) {
   const ref = useRef(null)
   const y = useMotionValue(0)
@@ -176,7 +176,7 @@ export function Dialog ({ open, onClose, title, actions, footer, sheet, children
   )
 }
 
-// Filled text field. as: 'input' | 'textarea' | 'select'
+// filled text field with input text area or select modes
 export const Field = forwardRef(({ as: Tag = 'input', label, hint, className, ...p }, ref) => (
   <label className={cx('group block', className)}>
     <div className="relative rounded-t-xl border-b-2 border-on-surface-variant bg-surface-container-highest px-4 pt-2 pb-2 transition-colors focus-within:border-primary">
@@ -191,9 +191,8 @@ export const Field = forwardRef(({ as: Tag = 'input', label, hint, className, ..
   </label>
 ))
 
-// Toast pill: bottom center, floating above the FAB; surface-container-highest
-// container, primary action, close affordance. Mount with a fresh `key` per
-// message; it dismisses itself after `duration`.
+// toast pill floats above the add button
+// mount each message with a new key and it closes after its duration
 export function Snackbar ({ message, action, duration = 4000, onClose }) {
   const close = useRef(onClose)
   close.current = onClose
@@ -281,7 +280,7 @@ export function Select ({ label, value, options, onChange }) {
   )
 }
 
-// + button that fans out into actions. actions: [{ label, icon, onSelect }] (top → bottom)
+// add button that fans out into actions from top to bottom
 export function FabMenu ({ actions }) {
   const [open, setOpen] = useState(false)
   return (

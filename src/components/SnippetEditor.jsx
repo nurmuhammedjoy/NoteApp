@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CopyIcon, EditIcon, ExpandMoreIcon } from '../icons.jsx'
 import { IconButton } from '../ui.jsx'
-import { cutWords } from '../text.js'
 
 const Icon = ({ d }) => (
   <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor"><path d={d} /></svg>
@@ -9,6 +8,14 @@ const Icon = ({ d }) => (
 const CHEVRON_DOWN = 'm7.41 8.59 4.59 4.58 4.59-4.58L18 10l-6 6-6-6z'
 const ARROW_BACK = 'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'
 const CHECK = 'M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z'
+
+// older notes stored the first line prefix as the title
+// treat those as untitled so the title field is empty
+const userTitle = snippet => {
+  const title = snippet?.title || ''
+  const first = (snippet?.text || '').trim().split('\n')[0]
+  return title && first.startsWith(title) ? '' : title
+}
 
 export default function SnippetEditor ({ open, folders, snippet, searchQuery = '', onClose, onSave, onCopy }) {
   const [title, setTitle] = useState('')
@@ -30,11 +37,11 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
     if (!el) return
     activeFieldRef.current = el
     cancelAnimationFrame(revealFrameRef.current)
-    // Let Chrome finish applying the visual viewport resize before measuring.
+    // wait for the browser viewport resize before measuring
     revealFrameRef.current = requestAnimationFrame(() => requestAnimationFrame(() => revealCaret(el)))
   }
 
-  // Measure the caret's vertical offset inside a textarea using a hidden mirror.
+  // measure the caret offset with a hidden mirror
   const caretOffset = el => {
     const mirror = mirrorRef.current
     if (!mirror || !el.clientWidth) return 0
@@ -53,7 +60,7 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
     return marker.getBoundingClientRect().top - mirror.getBoundingClientRect().top
   }
 
-  // Scroll only when the active field or caret sits outside the visible area above the bottom bar.
+  // scroll when the active field or caret is outside the visible area
   const revealCaret = el => {
     const box = scrollRef.current
     if (!box || !el) return
@@ -97,7 +104,7 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
 
   useEffect(() => {
     if (!open) return
-    setTitle(snippet?.title || '')
+    setTitle(userTitle(snippet))
     setText(snippet?.text || '')
     setFolderId(snippet?.folderId || 'inbox')
     setFolderMenuOpen(false)
@@ -109,7 +116,15 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
     })
   }, [open, snippet])
 
-  // Grow the textarea with its content: reset to auto height, then measure.
+  // grow the title field as wrapped text adds lines
+  useEffect(() => {
+    const el = titleRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [title, open, searchView])
+
+  // reset the text area height then measure its content
   useEffect(() => {
     const el = textRef.current
     if (!el) return
@@ -135,7 +150,7 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
     return pieces
   }
 
-  // Scroll the active match to the middle of the content area (after render, so the DOM is current).
+  // scroll the active match to the content center after render
   useEffect(() => {
     const box = scrollRef.current
     const el = box?.querySelectorAll('mark')[activeMatch]
@@ -150,11 +165,11 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
   if (!open) return null
 
   const save = () => {
-    if (!text.trim()) return onClose()          // empty note = discard it (same as Google Keep)
-    const auto = cutWords(text.trim().split('\n')[0], 64)
-    const draft = { title: title.trim() || auto, text, folderId }
-    // Nothing changed → just close, without touching updatedAt or showing "Saved."
-    if (snippet && draft.title === snippet.title && draft.text === snippet.text && draft.folderId === snippet.folderId) return onClose()
+    if (!text.trim()) return onClose()          // discard an empty note
+    // keep the typed title and let the card choose its own fallback
+    const draft = { title: title.trim(), text, folderId }
+    // close without changing the update time or showing saved when nothing changed
+    if (snippet && draft.title === userTitle(snippet) && draft.text === snippet.text && draft.folderId === snippet.folderId) return onClose()
     onSave(draft)
   }
 
@@ -163,7 +178,6 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface text-on-surface">
-      {/* top bar */}
       <div className="flex items-center justify-between px-3 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
         <button onClick={searchView ? onClose : save} aria-label="Back" className="grid h-12 w-12 place-items-center rounded-full active:bg-on-surface/8">
           <Icon d={ARROW_BACK} />
@@ -179,21 +193,34 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
         </button>
       </div>
 
-      {/* content */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pb-24">
-        {searchView ? <div className="w-full py-3 text-[28px] leading-tight break-words">{highlight(title, 'title')}</div> : <input
+      <div ref={scrollRef} className="no-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 pb-24 [-webkit-overflow-scrolling:touch]">
+        {searchView ? <div className="w-full py-3 text-[28px] leading-tight break-words">{highlight(title, 'title')}</div> : <textarea
           ref={titleRef}
           value={title}
+          rows={1}
           onChange={e => {
-            setTitle(e.target.value)
+            setTitle(e.target.value.replace(/\s*\n+\s*/g, ' '))
             scheduleReveal(e.currentTarget)
+          }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              textRef.current?.focus()
+            }
           }}
           onFocus={e => scheduleReveal(e.currentTarget)}
           onClick={e => scheduleReveal(e.currentTarget)}
           onSelect={e => scheduleReveal(e.currentTarget)}
           onKeyUp={e => scheduleReveal(e.currentTarget)}
           placeholder="Title"
-          className="w-full bg-transparent py-3 text-[28px] leading-tight outline-none placeholder:text-on-surface-variant"
+          enterKeyHint="next"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          name="note-title"
+          data-lpignore="true"
+          data-form-type="other"
+          className="no-scrollbar block w-full resize-none overflow-hidden bg-transparent py-3 text-[28px] leading-tight break-words outline-none placeholder:text-on-surface-variant"
         />}
         {searchView ? <div className="mt-2 min-h-[50vh] w-full whitespace-pre-wrap break-words text-[17px] leading-relaxed">{highlight(text, 'text')}</div> : <textarea
           ref={textRef}
@@ -208,7 +235,11 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
           onKeyUp={e => scheduleReveal(e.currentTarget)}
           placeholder="Note"
           rows={1}
-          className="mt-2 block min-h-[50vh] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-on-surface-variant"
+          autoComplete="off"
+          name="note-body"
+          data-lpignore="true"
+          data-form-type="other"
+          className="no-scrollbar mt-2 block min-h-[50vh] w-full resize-none overflow-hidden bg-transparent touch-pan-y text-[17px] leading-relaxed outline-none placeholder:text-on-surface-variant"
           onKeyDown={e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
               e.preventDefault()
@@ -218,14 +249,13 @@ export default function SnippetEditor ({ open, folders, snippet, searchQuery = '
         />}
       </div>
 
-      {/* Offscreen mirror used only to locate the textarea caret across wrapped lines. */}
+      {/* mirror locates the caret across wrapped lines */}
       <div
         ref={mirrorRef}
         aria-hidden="true"
         style={{ position: 'fixed', left: '-10000px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}
       />
 
-      {/* bottom bar */}
       {searchView ? <div ref={bottomBarRef} className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1rem)]">
         <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-surface-container-high p-1.5 shadow-lg">
           <IconButton variant="tonal" className="size-12" disabled={!matches.length} onClick={() => goToMatch(activeMatch - 1)} aria-label="Previous match"><ExpandMoreIcon className="rotate-180" /></IconButton>

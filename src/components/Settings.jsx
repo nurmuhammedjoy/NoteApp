@@ -5,7 +5,7 @@ import { ArrowBackIcon, CheckIcon, ChevronRightIcon, DownloadIcon, FolderOpenIco
 import { COLOR_THEMES } from '../theme.js'
 import SyncSection from './SyncSection.jsx'
 
-// Expressive grouped list: big outer corners, tight 6px inner corners, 2px gaps.
+// grouped list with large outer corners and small inner corners
 export const Group = ({ label, children }) => (
   <section className="mb-6">
     <h3 className="px-4 pb-2 text-sm font-medium text-primary">{label}</h3>
@@ -47,7 +47,7 @@ const Tile = ({ icon, tone, title, text, onClick, className }) => (
   </motion.button>
 )
 
-// Full-screen tab opened from the Settings button: appearance and library tools.
+// full screen tab for appearance and library tools
 export default function Settings ({ open, onClose, onExport, onImport, onManageFolders, onToast, folderCount, snippetCount, colorTheme, onColorThemeChange, canInstall, onInstall }) {
   const fileRef = useRef(null)
   if (!open) return null

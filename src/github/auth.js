@@ -1,10 +1,10 @@
-// GitHub sign-in: a pasted personal access token.
-// The token is stored only in the IndexedDB `meta` store (record key 'github').
+// sign in to github with a pasted access token
+// the token is stored in the indexed db meta store
 import { deleteMeta, getMeta, putMeta } from '../db.js'
 
 export class AuthError extends Error {}
 
-// Validates the token, then stores it. Keeps the chosen repo when re-authenticating.
+// validate and store the token while keeping the chosen repo
 export async function completeSignIn (token) {
   const res = await fetch('https://api.github.com/user', {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
@@ -24,13 +24,13 @@ export async function completeSignIn (token) {
   })
 }
 
-// Token-free view for the UI.
+// return token details without the token
 export async function getSession () {
   const g = await getMeta('github')
   return g?.token ? { user: g.user, repo: g.repo, lastSyncAt: g.lastSyncAt } : null
 }
 
-// Called when GitHub answers 401: forget the token, keep repo + sync state for the re-login.
+// when github returns 401 forget the token and keep repo and sync state
 export async function dropToken () {
   const g = await getMeta('github')
   if (g) await putMeta({ ...g, token: null })

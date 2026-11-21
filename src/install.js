@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 
-// Wraps Chrome's install prompt so the UI can offer a normal-looking row.
+// wraps the browser install prompt for the install row
 export default function useInstall () {
   const [prompt, setPrompt] = useState(null)
   const [installed, setInstalled] = useState(isStandalone)
@@ -29,7 +29,7 @@ export default function useInstall () {
     if (!prompt) return false
     prompt.prompt()
     const { outcome } = await prompt.userChoice
-    setPrompt(null) // the browser event is single-use
+    setPrompt(null) // the browser event works once
     return outcome === 'accepted'
   }
 

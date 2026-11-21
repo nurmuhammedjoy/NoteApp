@@ -1,6 +1,6 @@
-// GitHub repo access (REST, Git Data API) + the shared archive serializer.
-// Repo layout = the io.js archive format: metadata.json + snippets/NNN-<slug>.txt.
-// metadata.json additionally carries `tombstones: [{ id, deletedAt }]`.
+// github repo access and the shared archive serializer
+// repo files use the archive format from io js
+// metadata also stores deleted snippet records
 import { getMeta, putMeta } from '../db.js'
 import { slug } from '../io.js'
 import { AuthError, dropToken } from './auth.js'
@@ -41,7 +41,6 @@ async function api (token, path, { method = 'GET', body, accept = 'application/v
   return raw ? res.text() : res.json()
 }
 
-/* ---- shared serializer (same file names as io.js exportArchive) ---- */
 
 export function serialize ({ folders, snippets, tombstones }) {
   const files = new Map()
@@ -50,7 +49,7 @@ export function serialize ({ folders, snippets, tombstones }) {
   const meta = {
     app: 'note',
     version: 1,
-    // Derived from the data (not the clock) so identical libraries serialize to identical bytes.
+    // derive this from the data so identical libraries serialize to identical bytes
     exportedAt: new Date(stamp).toISOString(),
     folders: [...folders]
       .sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : 1))
@@ -77,14 +76,14 @@ export function deserialize (metaText, texts) {
     folders: meta.folders,
     tombstones: Array.isArray(meta.tombstones) ? meta.tombstones : [],
     snippets: meta.snippets.map(({ file, ...s }) => {
-      // Never guess: a missing text file must not turn into an empty snippet.
+      // a missing text file must not become an empty snippet
       if (!texts.has(file)) throw new Error(`Repository is incomplete (missing ${file}).`)
       return { ...s, text: texts.get(file) }
     }),
   }
 }
 
-// Git blob id of a text, to detect unchanged files without uploading them.
+// git blob id detects unchanged text files
 async function gitSha (text) {
   const body = enc.encode(text)
   const head = enc.encode(`blob ${body.length}\0`)
@@ -95,7 +94,6 @@ async function gitSha (text) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-/* ---- repo list / create / select (read the session themselves) ---- */
 
 const session = async () => {
   const g = await getMeta('github')
@@ -123,17 +121,17 @@ export async function createMyRepo (name) {
   return { owner: r.owner.login, name: r.name, branch: r.default_branch }
 }
 
-// Choosing a repo resets sync state: the next cycle merges from scratch.
+// choosing a repo resets sync state so the next cycle starts fresh
 export async function selectRepo (repo) {
   const g = await session()
   await putMeta({ ...g, repo, lastSyncAt: 0, lastSyncSha: null, baseFolders: null })
 }
 
-/* ---- pull ---- */
 
 const slot = gh => `/repos/${gh.repo.owner}/${gh.repo.name}`
 
-// Current branch head: { sha, treeSha, tree: Map(path -> blob sha) }. sha is null for an empty repo.
+// current branch head has a commit and tree id and a map of file paths to blob ids
+// the commit id is empty when the repo has no commits
 export async function readHead (gh) {
   let ref
   try {
@@ -152,7 +150,7 @@ export async function readHead (gh) {
   }
 }
 
-// Downloads and parses the archive at `head` (raw blobs). Returns null if there is none yet.
+// downloads and parses the archive at the head and returns null when none exists
 export async function readArchive (gh, head) {
   if (!head.tree.has(META)) return null
   const blob = path => api(gh.token, `${slot(gh)}/git/blobs/${head.tree.get(path)}`, { accept: 'application/vnd.github.raw+json', raw: true })
@@ -169,9 +167,8 @@ export async function readArchive (gh, head) {
   return deserialize(metaText, texts)
 }
 
-/* ---- push ---- */
 
-// First commit into an empty repository (the Git Data API needs an existing commit).
+// create the first commit because the git data api needs an existing commit
 async function bootstrap (gh) {
   const text = serialize({ folders: [], snippets: [], tombstones: [] }).get(META)
   const r = await api(gh.token, `${slot(gh)}/contents/${META}`, {
@@ -181,9 +178,10 @@ async function bootstrap (gh) {
   return { sha: r.commit.sha, treeSha: r.commit.tree.sha, tree: new Map([[META, r.content.sha]]) }
 }
 
-// Commits `state` on top of `head`. Only changed files are sent; stale snippets/*.txt are removed;
-// other files in the repo are left alone. Throws StaleError if the remote moved meanwhile.
-// Returns the new head sha (or the old one when nothing changed).
+// commit state on top of the current head
+// send changed files and remove stale snippet text files
+// leave other repo files alone and throw stale error if remote changed
+// return the new head id or the old one when nothing changed
 export async function writeArchive (gh, head, state, message) {
   if (!head.sha) head = await bootstrap(gh)
   const files = serialize(state)

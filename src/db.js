@@ -1,5 +1,5 @@
-// Storage layer: the only file that talks to IndexedDB (+ clipboard helper).
-// If the app ever moves to native storage, swap this file — not the UI.
+// storage layer for indexed db and clipboard access
+// replace this file if the app moves to native storage
 export const DEFAULT_FOLDER = 'inbox'
 
 let dbp
@@ -56,7 +56,7 @@ function tx (stores, mode, fn) {
 export const getFolders = () => tx('folders', 'readonly', t => t.objectStore('folders').getAll())
 export const getSnippets = () => tx('snippets', 'readonly', t => t.objectStore('snippets').getAll())
 export const putFolder = f => tx('folders', 'readwrite', t => t.objectStore('folders').put(f))
-// Sync state (GitHub session, last sync, snippet tombstones) lives in the `meta` store.
+// sync state lives in the meta store
 export const getMeta = key => tx('meta', 'readonly', t => t.objectStore('meta').get(key))
 export const putMeta = record => tx('meta', 'readwrite', t => t.objectStore('meta').put(record))
 export const deleteMeta = key => tx('meta', 'readwrite', t => t.objectStore('meta').delete(key))
@@ -66,7 +66,7 @@ const tombs = (t, fn) => {
   m.get('tombstones').onsuccess = e => m.put({ key: 'tombstones', items: fn(e.target.result?.items ?? []) })
 }
 
-// Saving a snippet clears its tombstone, so Undo (or a re-import) is not deleted again by sync.
+// saving a snippet clears its tombstone so sync will not delete it again
 export const putSnippet = s => tx(['snippets', 'meta'], 'readwrite', t => {
   t.objectStore('snippets').put(s)
   tombs(t, items => items.filter(x => x.id !== s.id))
@@ -75,7 +75,7 @@ export const deleteSnippet = id => tx(['snippets', 'meta'], 'readwrite', t => {
   t.objectStore('snippets').delete(id)
   tombs(t, items => [...items.filter(x => x.id !== id), { id, deletedAt: Date.now() }])
 })
-// Import atomically so a failed replacement can never erase the existing library.
+// import atomically so a failed replacement keeps the existing library
 export const importData = (folders, snippets, replace = false) =>
   tx(['folders', 'snippets', 'meta'], 'readwrite', transaction => {
     const folderStore = transaction.objectStore('folders')
@@ -91,7 +91,7 @@ export const importData = (folders, snippets, replace = false) =>
     if (!folders.some(folder => folder.id === DEFAULT_FOLDER)) {
       folderStore.put({ id: DEFAULT_FOLDER, name: 'Inbox', order: 0, createdAt: Date.now() })
     }
-    // Imported snippets are alive again; snippets wiped by "Replace all" are tombstoned for sync.
+    // imported snippets are alive again and replaced snippets are marked deleted for sync
     tombs(transaction, items => [
       ...items.filter(x => !incoming.has(x.id)),
       ...(oldKeys?.result ?? []).filter(id => !incoming.has(id)).map(id => ({ id, deletedAt: Date.now() })),
@@ -99,8 +99,9 @@ export const importData = (folders, snippets, replace = false) =>
     return null
   })
 
-// Sync write-back in ONE transaction. `guard` maps id -> updatedAt seen when the sync read local
-// state; a record edited or deleted meanwhile is skipped (the next cycle picks it up).
+// sync writes back in one transaction
+// guard maps each id to its update time from the local read
+// skip records edited or deleted meanwhile so the next cycle can handle them
 export const applySync = ({ putFolders, deleteFolders, putSnippets, deleteSnippets, tombstones, tombstonesBefore, guard }) =>
   tx(['folders', 'snippets', 'meta'], 'readwrite', t => {
     const folders = t.objectStore('folders')
@@ -127,9 +128,9 @@ export const applySync = ({ putFolders, deleteFolders, putSnippets, deleteSnippe
 
 export const newId = () => crypto.randomUUID()
 
-// Delete a folder and move its snippets to the default folder in ONE transaction, so a sync
-// cycle can never run between the two steps. Moved snippets get a fresh `updatedAt`: that is
-// what makes the move win the merge and trip the sync write-back guard.
+// delete a folder and move its snippets in one transaction
+// this prevents sync from running between the two steps
+// moved snippets get a new update time so the move wins the merge and write back guard
 export function deleteFolderAndReassign (id) {
   const out = { moved: 0, at: Date.now() }
   return tx(['folders', 'snippets'], 'readwrite', t => {
@@ -147,7 +148,7 @@ export async function copyText (text) {
     await navigator.clipboard.writeText(text)
     return
   }
-  // Fallback for browsers without the async Clipboard API.
+  // use this when the browser lacks the async clipboard api
   const ta = document.createElement('textarea')
   ta.value = text
   document.body.appendChild(ta)

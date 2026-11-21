@@ -1,6 +1,6 @@
-// Material Symbols Rounded glyphs as inline SVG components (Google's official
-// per-glyph 24px files, prerendered here so no icon font is needed).
-// Each forwards all adapter props, matching material3-expressive IconSourceProps.
+// material symbols rounded glyphs as inline svg components
+// glyphs are included here so no icon font is needed
+// each component forwards its icon props
 import React from 'react'
 
 export const AddIcon = props => (

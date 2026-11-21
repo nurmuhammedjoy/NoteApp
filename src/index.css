@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Material 3 baseline color roles (seed #6750A4), light + dark.
-   To re-theme, change these values only. */
+/* material 3 base color roles for light and dark themes
+   change these values to re theme */
 :root {
   --surface: #fef7ff; --on-surface: #1d1b20; --on-surface-variant: #49454f;
   --surface-container: #f3edf7; --surface-container-high: #ece6f0; --surface-container-highest: #e6e0e9;
@@ -28,7 +28,7 @@
   }
 }
 
-/* Material 3 accent roles for selectable color themes. */
+/* material 3 accent roles for selectable color themes */
 :root[data-color-theme="blue"] {
   --surface: #f8f9ff; --surface-container: #eef1f8; --surface-container-high: #e8ebf3; --surface-container-highest: #e1e5ed;
   --primary: #005a9c; --on-primary: #fff;
@@ -149,8 +149,7 @@
 
 html, body { overflow-x: clip; }
 
-/* <mark> defaults to bright yellow in browsers — neutralize it so any
-   unstyled match highlight falls back to the app palette instead. */
+/* browser mark highlight uses the app palette */
 @layer base {
   mark { background-color: transparent; color: inherit; }
 }

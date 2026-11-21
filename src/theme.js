@@ -1,4 +1,4 @@
-// Accent palette choices for the Material 3 color roles defined in index.css.
+// accent palettes for the material 3 color roles in index css
 export const COLOR_THEMES = [
   { id: 'purple', label: 'Purple', color: '#6750a4' },
   { id: 'blue', label: 'Blue', color: '#005a9c' },

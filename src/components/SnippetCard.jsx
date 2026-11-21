@@ -6,7 +6,7 @@ import { cutWords, excerptFrom } from '../text.js'
 
 const HOLD_MS = 800
 
-// M3 Expressive segmented list: big outer corners, tight inner corners, 2px gaps.
+// segmented list with large outer corners and small inner corners
 const SHAPE = {
   only: 'rounded-[28px]',
   first: 'rounded-t-[28px] rounded-b-lg',
@@ -14,7 +14,7 @@ const SHAPE = {
   last: 'rounded-t-lg rounded-b-[28px]',
 }
 
-// Wrap every occurrence of the (lowercased) query in <mark>.
+// mark every match for the lowercased query
 const Mark = ({ text, q }) => {
   if (!q) return text
   const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i'))
@@ -23,14 +23,14 @@ const Mark = ({ text, q }) => {
     : p))
 }
 
-// Height follows content: title (max 2 lines), optional 2-line preview, tag + date.
+// height follows the title preview tag and date
 export default function SnippetCard ({ snippet: s, folderName, pos = 'only', query = '', onOpen, onCopy, onDelete }) {
   const text = s.text.trim()
   const [holding, setHolding] = useState(false)
   const holdTimer = useRef(null)
   const copiedRef = useRef(false)
 
-  // Hold the item (0.8s) to copy; a fill sweeps across so it's discoverable.
+  // hold the item to copy and show a sweeping fill
   const startHold = () => {
     copiedRef.current = false
     setHolding(true)
@@ -56,10 +56,10 @@ export default function SnippetCard ({ snippet: s, folderName, pos = 'only', que
   }
 
   let title = s.title || cutWords(text.split('\n')[0], 80)
-  // Older snippets have titles cut mid-word: finish the word from the text.
+  // finish older titles cut mid word using the snippet text
   if (text.startsWith(title) && /\S$/.test(title)) title += text.slice(title.length).match(/^\S*/)[0]
   let preview = text.startsWith(title) ? text.slice(title.length).trim() : text
-  // When searching, re-anchor the excerpt so the match stays visible.
+  // keep the match visible in search excerpts
   const q = query.trim().toLowerCase()
   const hit = q ? preview.toLowerCase().indexOf(q) : -1
   if (hit > 40) preview = excerptFrom(preview, hit)
@@ -72,8 +72,7 @@ export default function SnippetCard ({ snippet: s, folderName, pos = 'only', que
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            // Delay the sweep so quick taps (open the card) never see a flash
-            // of it; it only becomes visible once the press is a real hold.
+            // show the sweep only after a real hold
             transition={{ delay: 0.15, duration: (HOLD_MS - 150) / 1000, ease: 'linear' }}
             className="h-full origin-left bg-primary/15"
           />
